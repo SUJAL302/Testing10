@@ -1,0 +1,31 @@
+name: 1-Channel YT Live Stream (Anti-Kill)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  Single_Stream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install FFmpeg & yt-dlp
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg python3-pip
+          pipx install yt-dlp
+
+      - name: Download 1h24m Video Directly from YouTube
+        run: yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" "https://www.youtube.com/watch?v=0SZt4eWJjbI" -o video.mp4
+
+      - name: Start Stream with Keep-Alive & Auto-Restart
+        timeout-minutes: 350
+        run: |
+          # 1. Anti-Silence Trick: Har 10 minute baad ping bhejega taaki ban na hove
+          (while true; do echo "Keep-Alive Ping: Stream is running perfectly... $(date)"; sleep 600; done) &
+          
+          # 2. Auto-Restart Loop: Je rukk jaye taan 2 sec baad automatic chal paye
+          while true; do
+            echo "FFmpeg Stream Start ho rahi hai..."
+            ffmpeg -stream_loop -1 -re -i video.mp4 -c:v libx264 -preset ultrafast -b:v 2500k -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 60 -c:a aac -b:a 128k -f flv "rtmp://a.rtmp.youtube.com/live2/${{ secrets.STREAM_KEY_1 }}"
+            echo "FFmpeg rukk gaya! 2 second baad Auto-Restart ho reha hai..."
+            sleep 2
+          done
